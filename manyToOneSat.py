@@ -142,8 +142,6 @@ def allHospitalsResponsivePreferences():
 
 
 
-
-
 def allHospitalsResponsiveProfiles():  # return all responsive hospital's profiles
     ans = []
     count = 1

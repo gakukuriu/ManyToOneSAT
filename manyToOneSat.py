@@ -140,6 +140,58 @@ def allHospitalsResponsivePreferences():
     print(ans)
     print(len(ans))
 
+def completeResponsiveCondition(J_index, pref, capa):
+    powerI_index = 2**m - 1
+    powerI = list(powerset(range(m)))
+    J = powerI[J_index]
+    IminusJ = powerI[powerI_index-J_index]
+    preflist = [powerI[i] for i in (list(permutations(range(2**m))))[pref]]
+    if len(J) > capa:
+        if (preflist.index(J) < preflist.index(())):
+            return False
+    for i in IminusJ:
+        Jplusi = tuple(sorted(J + (i,)))
+        if len(J) < capa:
+            if (preflist.index(Jplusi) < preflist.index(J)):
+                if preflist.index(()) < preflist.index((i,)):
+                    return False
+            if preflist.index((i,)) < preflist.index(()):
+                if preflist.index(J) < preflist.index(Jplusi):
+                    return False
+        for j in IminusJ:
+            if i != j:
+                Jplusj = tuple(sorted(J + (j,)))
+                if preflist.index(Jplusi) < preflist.index(Jplusj):
+                    if preflist.index((j,)) < preflist.index((i,)):
+                        return False
+                if preflist.index((i,)) < preflist.index((j,)):
+                    if preflist.index(Jplusj) < preflist.index(Jplusi):
+                        return False
+    return True
+
+
+def responsivePrefCapa(pref, capa):
+    allJ = 2**m
+    for j in range(allJ):
+        if not(completeResponsiveCondition(j, pref, capa)):
+            return False
+    return True
+
+def allHospitalsResponsivePrefCapa():
+    ans = []
+    for p in allHospitalsPreferences():
+        for c in allHospitalsCapacityIndices():
+            if responsivePrefCapa(p, c):
+                ans.append((p,c))
+            print("finished", p, c)
+    print(ans)
+    print(len(ans))
+
+def repHospitalsPreference(pref):
+    powerI = list(powerset(range(m)))
+    preflist = [powerI[i] for i in (list(permutations(range(2**m))))[pref]]
+    print(preflist)
+
 
 
 def allHospitalsResponsiveProfiles():  # return all responsive hospital's profiles

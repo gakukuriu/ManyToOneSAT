@@ -129,6 +129,21 @@ def responsivePref(prList):  # check whether preference list prList is responsiv
             return False
     return True
 
+def allHospitalsResponsivePreferences():
+    ans = []
+    preflists = list(permutations(range(2**m)))
+    pw = list(powerset(allInternsIndices()))
+    for p in allHospitalsPreferences():
+        prefList = [pw[i] for i in preflists[p]]
+        if responsivePref(prefList):
+            ans.append(p)
+    print(ans)
+    print(len(ans))
+
+
+
+
+
 def allHospitalsResponsiveProfiles():  # return all responsive hospital's profiles
     ans = []
     count = 1

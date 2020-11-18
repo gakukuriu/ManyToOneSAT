@@ -129,7 +129,7 @@ def responsivePref(prList):  # check whether preference list prList is responsiv
             return False
     return True
 
-def allHospitalsResponsivePreferences():
+def allHospitalsResponsivePreferences():  # return all responsive preferences of hospitals
     ans = []
     preflists = list(permutations(range(2**m)))
     pw = list(powerset(allInternsIndices()))
@@ -137,28 +137,18 @@ def allHospitalsResponsivePreferences():
         prefList = [pw[i] for i in preflists[p]]
         if responsivePref(prefList):
             ans.append(p)
-    print(ans)
-    print(len(ans))
+    return (range(len(ans)), ans)
 
+def allHospitalsResponsiveProfiles():
+    _, y = allHospitalsResponsivePreferences()
+    return (range(len(y) ** n), y)
 
+def visualize_HospitalPreference(p):
+    preflists = list(permutations(range(2**m)))
+    pw = list(powerset(allInternsIndices()))
+    prefList = [pw[i] for i in preflists[p]]
+    return prefList
 
-
-
-def allHospitalsResponsiveProfiles():  # return all responsive hospital's profiles
-    ans = []
-    count = 1
-    for p in allHospitalsProfiles():
-        b = True
-        for i in allHospitalsIndices():
-            r = responsivePref(hospitalsPrefList(i, p))
-            b &= r
-            if not r:
-                break
-        print("success", count)
-        count+=1
-        if b:
-            ans.append(p)
-    return ans
 
 def inGroup(i, g):  # check whether intern i belongs to group g
     allG = list(powerset(range(m)))
@@ -237,17 +227,14 @@ def iVariantsForCapacities(i, q):  # return i-variants of the hospital's capacit
 # Creating and Editing CNF
 #
 
-def posLiteral(p_H, p_I, p_q, h, g):  # return a positive literal which represents that hospital h matches group of interns g in profile (p_H, p_I, p_q)
-    allPH = (factorial(2 ** m)) ** n
-    allPI = (factorial(n+1)) ** m
-    allPQ = m ** n
+def posLiteral(p_H, p_I, p_q, h, g, allPH, allPI, allPQ):  # return a positive literal which represents that hospital h matches group of interns g in profile (p_H, p_I, p_q)
     p = (p_H * (allPH * allPI * allPQ)) + (p_I * (allPH * allPQ)) + p_q + 1
     return p * (n * (2**m)) + (h * (2**m)) + g + 1
 
-def negLiteral(p_H, p_I, p_q, h, g):  # return a negative literal which represents that hospital h doesn't match  group of interns g in profile (p_H, p_I, p_q)
-    return (-1) * posLiteral(p_H, p_I, p_q, h, g)
+def negLiteral(p_H, p_I, p_q, h, g, allPH, allPI, allPQ):  # return a negative literal which represents that hospital h doesn't match  group of interns g in profile (p_H, p_I, p_q)
+    return (-1) * posLiteral(p_H, p_I, p_q, h, g, allPH, allPI, allPQ)
 
-def interpretVariable(x):  # interpret the literal and present it in a readable form
+def interpretVariable(x, hospRespDict):  # interpret the literal and present it in a readable form
     g = (x-1) % (2**m)
     h = ((x - g - 1) % (n * (2**m))) // (2**m)
     p = ((x - h * (2**m) - g - 1)) // (n * (2**m))
@@ -302,27 +289,41 @@ def subsetsOfInternGroupsIndices(g):  # return groups that are proper subsets of
                 ans.append(pw.index(p))
     return ans
 
+def intersectionOfInternGroupsIndices(g):
+    ans = []
+    pw = list(powerset(allInternsIndices()))
+    gPW = pw[g]
+    for p in pw:
+        if (p != gPW) and (p != ()):
+            if set(p) & set(gPW):
+                ans.append(pw.index(p))
+    return ans
+
 def cnfMechanism():  # a CNF to ensure that the Mechanism receives the Profile and returns Matching
     cnf = []
     pw = list(powerset(allInternsIndices()))
-    for p_H in allHospitalsResponsiveProfiles():
+    allHospRespProf, _ = allHospitalsResponsiveProfiles()
+    allPH = len(allHospRespProf)
+    allPI = len(allInternsProfiles())
+    allPQ = len(allHospitalsCapacities())
+    for p_H in allHospRespProf:
         for p_q in allHospitalsCapacities():
             for p_I in allInternsProfiles():
                 for h in allHospitalsIndices():
-                    cnf.append([posLiteral(p_H, p_I, p_q, h, g) for g in internGroupsIndices(lambda g : len(pw[g]) <= hospitalsCapa(h, p_q))])
+                    cnf.append([posLiteral(p_H, p_I, p_q, h, g, allPH, allPI, allPQ) for g in internGroupsIndices(lambda g : len(pw[g]) <= hospitalsCapa(h, p_q))])
                     for g1 in allInternGroupsIndices():
                         for g2 in internGroupsIndices(lambda g2 : g1 < g2):
-                            cnf.append([negLiteral(p_H, p_I, p_q, h, g1), negLiteral(p_H, p_I, p_q, h, g2)])
+                            cnf.append([negLiteral(p_H, p_I, p_q, h, g1, allPH, allPI, allPQ), negLiteral(p_H, p_I, p_q, h, g2, allPH, allPI, allPQ)])
                 for g in allInternGroupsIndices():
                     if g:
                         for h1 in allHospitalsIndices():
                             for h2 in hospitalsIndices(lambda h2 : h1 < h2):
-                                cnf.append([negLiteral(p_H, p_I, p_q, h1, g), negLiteral(p_H, p_I, p_q, h2, g)])
-                        for g3 in subsetsOfInternGroupsIndices(g):
+                                cnf.append([negLiteral(p_H, p_I, p_q, h1, g, allPH, allPI, allPQ), negLiteral(p_H, p_I, p_q, h2, g, allPH, allPI, allPQ)])
+                        for g3 in intersectionOfInternGroupsIndices(g):
                             for h1 in allHospitalsIndices():
                                 for h2 in hospitalsIndices(lambda h2 : h1 < h2):
-                                    cnf.append([negLiteral(p_H, p_I, p_q, h1, g), negLiteral(p_H, p_I, p_q, h2, g3)])
-                                    cnf.append([negLiteral(p_H, p_I, p_q, h2, g), negLiteral(p_H, p_I, p_q, h1, g3)])
+                                    cnf.append([negLiteral(p_H, p_I, p_q, h1, g, allPH, allPI, allPQ), negLiteral(p_H, p_I, p_q, h2, g3, allPH, allPI, allPQ)])
+                                    cnf.append([negLiteral(p_H, p_I, p_q, h2, g, allPH, allPI, allPQ), negLiteral(p_H, p_I, p_q, h1, g3, allPH, allPI, allPQ)])
 
     return cnf
 
